@@ -57,7 +57,8 @@ _COLOR_PINV_BLOCK_DIAG = torch.block_diag(
     torch.tensor([[0.0480542, -0.0043631], [-0.0043631, 0.0481283]]),  # Blue
     torch.tensor([[0.0580570, -0.0179872], [-0.0179872, 0.0431061]]),  # Red
     torch.tensor([[0.0433336, -0.0180537], [-0.0180537, 0.0580500]]),  # Green
-    torch.tensor([[0.0128369, -0.0034654], [-0.0034654, 0.0128158]]),  # Neutral
+    torch.tensor([[0.0128369, -0.0034654],
+                 [-0.0034654, 0.0128158]]),  # Neutral
 ).to(torch.float32)
 
 # Constants (match config.h)
@@ -378,7 +379,8 @@ class _PPISPController(nn.Module):
         # CNN encoder: 1x1 convolutions for per-pixel feature extraction
         self.cnn_encoder = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=1, device=device),
-            nn.MaxPool2d(kernel_size=input_downsampling, stride=input_downsampling),
+            nn.MaxPool2d(kernel_size=input_downsampling,
+                         stride=input_downsampling),
             nn.ReLU(inplace=True),
             nn.Conv2d(16, 32, kernel_size=1, device=device),
             nn.ReLU(inplace=True),
@@ -425,7 +427,8 @@ class _PPISPController(nn.Module):
             prior_exposure = torch.zeros(1, device=rgb.device)
 
         # Extract CNN features
-        features = self.cnn_encoder(rgb.permute(2, 0, 1).unsqueeze(0).detach())  # [1, cnn_output_dim]
+        features = self.cnn_encoder(rgb.permute(
+            2, 0, 1).unsqueeze(0).detach())  # [1, cnn_output_dim]
         features = torch.cat([features.squeeze(0), prior_exposure], dim=0)
         hidden = self.mlp_trunk(features)
         return self.exposure_head(hidden).squeeze(-1), self.color_head(hidden)
@@ -433,6 +436,7 @@ class _PPISPController(nn.Module):
 # =============================================================================
 # Main PPISP Module
 # =============================================================================
+
 
 class PPISP(nn.Module):
     """Physically-Plausible Image Signal Processing module with integrated controller.
@@ -566,7 +570,8 @@ class PPISP(nn.Module):
         num_frames = state_dict["exposure_params"].shape[0]
 
         # Create instance with inferred dimensions
-        instance = cls(num_cameras=num_cameras, num_frames=num_frames, config=config)
+        instance = cls(num_cameras=num_cameras,
+                       num_frames=num_frames, config=config)
         instance.load_state_dict(state_dict)
 
         return instance
@@ -642,7 +647,8 @@ class PPISP(nn.Module):
         # 1. Novel views (frame_idx=-1): either controller predictions or zeros
         # 2. Training after controller activation: controller predictions
         is_novel_view = (camera_idx_int != -1 and frame_idx_int == -1)
-        apply_correction_override = is_novel_view or (controller_trained and camera_idx_int != -1)
+        apply_correction_override = is_novel_view or (
+            controller_trained and camera_idx_int != -1)
 
         if apply_correction_override:
             if is_novel_view and not controller_trained:
@@ -659,7 +665,8 @@ class PPISP(nn.Module):
 
                 # Predict exposure and color params using controller
                 controller = self.controllers[camera_idx_int]
-                exposure_pred, color_pred = controller(rgb_image, exposure_prior)
+                exposure_pred, color_pred = controller(
+                    rgb_image, exposure_prior)
 
                 # Use 1-element tensors for predictions to save memory bandwidth
                 exposure = exposure_pred.unsqueeze(0)  # [1]
@@ -809,11 +816,13 @@ class PPISP(nn.Module):
         ppisp_optimizer = optimizers[0]
 
         # Compute controller activation step
-        self._controller_activation_step = int(cfg.controller_activation_ratio * max_optimization_iters)
+        self._controller_activation_step = int(
+            cfg.controller_activation_ratio * max_optimization_iters)
 
         # Compute decay gamma for exponential decay phase
         # After decay_max_steps, lr should be final_factor * base_lr
-        gamma = cfg.scheduler_final_factor ** (1.0 / cfg.scheduler_decay_max_steps)
+        gamma = cfg.scheduler_final_factor ** (1.0 /
+                                               cfg.scheduler_decay_max_steps)
 
         # Linear warmup + exponential decay using built-in schedulers
         ppisp_scheduler = torch.optim.lr_scheduler.SequentialLR(

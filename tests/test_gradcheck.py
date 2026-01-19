@@ -313,7 +313,8 @@ def test_gradient_magnitude_reasonable():
         ('rgb_in', rgb_in),
     ]:
         assert param.grad is not None, f"{name} has no gradient"
-        assert torch.isfinite(param.grad).all(), f"{name} has non-finite gradient"
+        assert torch.isfinite(param.grad).all(
+        ), f"{name} has non-finite gradient"
 
         grad_norm = param.grad.norm().item()
         assert grad_norm < 1e6, f"{name} gradient too large: {grad_norm}"

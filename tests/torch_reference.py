@@ -33,7 +33,8 @@ _COLOR_PINV_BLOCK_DIAG = torch.block_diag(
     torch.tensor([[0.0480542, -0.0043631], [-0.0043631, 0.0481283]]),  # Blue
     torch.tensor([[0.0580570, -0.0179872], [-0.0179872, 0.0431061]]),  # Red
     torch.tensor([[0.0433336, -0.0180537], [-0.0180537, 0.0580500]]),  # Green
-    torch.tensor([[0.0128369, -0.0034654], [-0.0034654, 0.0128158]]),  # Neutral
+    torch.tensor([[0.0128369, -0.0034654],
+                 [-0.0034654, 0.0128158]]),  # Neutral
 ).to(torch.float32)
 
 
@@ -151,7 +152,9 @@ def ppisp_apply_torch(
 
     # --- Exposure compensation ---
     if frame_idx != -1:
-        rgb = rgb * torch.pow(torch.tensor(2.0, device=rgb.device), exposure_params[frame_idx])
+        rgb = rgb * \
+            torch.pow(torch.tensor(2.0, device=rgb.device),
+                      exposure_params[frame_idx])
 
     # --- Vignetting ---
     def compute_vignetting_falloff(vig_params: torch.Tensor, uv: torch.Tensor) -> torch.Tensor:
@@ -175,7 +178,8 @@ def ppisp_apply_torch(
         # Per-channel vignetting [num_cameras, 3, 5]
         rgb_channels = []
         for ch in range(3):
-            falloff = compute_vignetting_falloff(vignetting_params[camera_idx, ch], uv)
+            falloff = compute_vignetting_falloff(
+                vignetting_params[camera_idx, ch], uv)
             rgb_channels.append(rgb[:, ch] * falloff)
 
         rgb = torch.stack(rgb_channels, dim=-1)

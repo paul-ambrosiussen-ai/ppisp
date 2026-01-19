@@ -184,8 +184,10 @@ def _plot_vignetting(fig, gs, vig_params: torch.Tensor, cam: int):
         oc = vig_params[cam, ch, :2].detach().cpu().numpy()
         cx = (float(oc[0]) + 0.5) * size
         cy = (float(oc[1]) + 0.5) * size
-        ax_img.plot([cx - cross_size, cx + cross_size], [cy, cy], color=color, linewidth=cross_width)
-        ax_img.plot([cx, cx], [cy - cross_size, cy + cross_size], color=color, linewidth=cross_width)
+        ax_img.plot([cx - cross_size, cx + cross_size],
+                    [cy, cy], color=color, linewidth=cross_width)
+        ax_img.plot([cx, cx], [cy - cross_size, cy + cross_size],
+                    color=color, linewidth=cross_width)
 
 
 # =============================================================================
@@ -253,12 +255,17 @@ def _homography_from_params(p: torch.Tensor) -> torch.Tensor:
     s_b = torch.tensor([0.0, 0.0, 1.0], device=device, dtype=dtype)
     s_r = torch.tensor([1.0, 0.0, 1.0], device=device, dtype=dtype)
     s_g = torch.tensor([0.0, 1.0, 1.0], device=device, dtype=dtype)
-    s_gray = torch.tensor([1.0 / 3.0, 1.0 / 3.0, 1.0], device=device, dtype=dtype)
+    s_gray = torch.tensor([1.0 / 3.0, 1.0 / 3.0, 1.0],
+                          device=device, dtype=dtype)
 
-    t_b = torch.stack([s_b[0] + bd[..., 0], s_b[1] + bd[..., 1], torch.ones_like(bd[..., 0])], dim=-1)
-    t_r = torch.stack([s_r[0] + rd[..., 0], s_r[1] + rd[..., 1], torch.ones_like(rd[..., 0])], dim=-1)
-    t_g = torch.stack([s_g[0] + gd[..., 0], s_g[1] + gd[..., 1], torch.ones_like(gd[..., 0])], dim=-1)
-    t_gray = torch.stack([s_gray[0] + nd[..., 0], s_gray[1] + nd[..., 1], torch.ones_like(nd[..., 0])], dim=-1)
+    t_b = torch.stack([s_b[0] + bd[..., 0], s_b[1] +
+                      bd[..., 1], torch.ones_like(bd[..., 0])], dim=-1)
+    t_r = torch.stack([s_r[0] + rd[..., 0], s_r[1] +
+                      rd[..., 1], torch.ones_like(rd[..., 0])], dim=-1)
+    t_g = torch.stack([s_g[0] + gd[..., 0], s_g[1] +
+                      gd[..., 1], torch.ones_like(gd[..., 0])], dim=-1)
+    t_gray = torch.stack([s_gray[0] + nd[..., 0], s_gray[1] +
+                         nd[..., 1], torch.ones_like(nd[..., 0])], dim=-1)
 
     T = torch.stack([t_b, t_r, t_g], dim=-1)  # [...,3,3]
 
@@ -279,7 +286,8 @@ def _homography_from_params(p: torch.Tensor) -> torch.Tensor:
     mask = n2 < 1.0e-20
     lam = torch.where(mask.unsqueeze(-1), torch.cross(r1, r2, dim=-1), lam)
 
-    S_inv = torch.tensor([[-1.0, -1.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], device=device, dtype=dtype)
+    S_inv = torch.tensor([[-1.0, -1.0, 1.0], [1.0, 0.0, 0.0],
+                         [0.0, 1.0, 0.0]], device=device, dtype=dtype)
     D = torch.zeros(*p.shape[:-1], 3, 3, device=device, dtype=dtype)
     D[..., 0, 0] = lam[..., 0]
     D[..., 1, 1] = lam[..., 1]
@@ -415,8 +423,10 @@ def _plot_color(
 
     x = np.arange(n)
     for i in range(4):
-        ax_rc.plot(x, shifts[:, i, 0].detach().cpu().numpy(), color=cols[i], label=names[i], alpha=0.8)
-        ax_gm.plot(x, shifts[:, i, 1].detach().cpu().numpy(), color=cols[i], alpha=0.8)
+        ax_rc.plot(x, shifts[:, i, 0].detach().cpu().numpy(),
+                   color=cols[i], label=names[i], alpha=0.8)
+        ax_gm.plot(x, shifts[:, i, 1].detach(
+        ).cpu().numpy(), color=cols[i], alpha=0.8)
     ax_rc.set_title("Red-Cyan Shift Over Time")
     ax_rc.set_xlabel("Frame Index")
     ax_rc.set_ylabel("Red-Cyan Shift")
@@ -440,12 +450,17 @@ def _plot_color(
     cross_width = 2
     for i in range(4):
         pts = chroms_scaled[:, i, :]
-        traj = np.array([_chrom_barycentric_to_window(float(r_val), float(g_val), size) for r_val, g_val in pts])
-        ax_rgplot.plot(traj[:, 0], traj[:, 1], "-", color="black", linewidth=1.0, alpha=0.7)
+        traj = np.array([_chrom_barycentric_to_window(
+            float(r_val), float(g_val), size) for r_val, g_val in pts])
+        ax_rgplot.plot(traj[:, 0], traj[:, 1], "-",
+                       color="black", linewidth=1.0, alpha=0.7)
         fx, fy = traj[-1]
-        ax_rgplot.plot([fx - cross_size, fx + cross_size], [fy, fy], "-", color="black", linewidth=cross_width)
-        ax_rgplot.plot([fx, fx], [fy - cross_size, fy + cross_size], "-", color="black", linewidth=cross_width)
-        sx, sy = _chrom_barycentric_to_window(float(src[i, 0].item()), float(src[i, 1].item()), size)
+        ax_rgplot.plot([fx - cross_size, fx + cross_size],
+                       [fy, fy], "-", color="black", linewidth=cross_width)
+        ax_rgplot.plot([fx, fx], [fy - cross_size, fy + cross_size],
+                       "-", color="black", linewidth=cross_width)
+        sx, sy = _chrom_barycentric_to_window(
+            float(src[i, 0].item()), float(src[i, 1].item()), size)
         ax_rgplot.plot(
             [sx - cross_size * 0.75, sx + cross_size * 0.75], [sy, sy],
             "-", color="black", linewidth=cross_width / 2, alpha=0.5,
@@ -458,7 +473,8 @@ def _plot_color(
     mean_targets = tgt.mean(dim=0).detach().cpu().numpy()
     src_np = src.detach().cpu().numpy()
     H_np = _dlt_homography(src_np, mean_targets)
-    H_mean = torch.from_numpy(H_np).to(color_params.device, dtype=color_params.dtype)
+    H_mean = torch.from_numpy(H_np).to(
+        color_params.device, dtype=color_params.dtype)
 
     size = 256
     bars = np.zeros((size, size, 3), dtype=np.float32)
@@ -467,10 +483,12 @@ def _plot_color(
     bars[:, w: 2 * w] = [1, 0, 0]
     bars[:, 2 * w: 3 * w] = [0, 1, 0]
     bars[:, 3 * w:] = [0.5, 0.5, 0.5]
-    bottom = torch.from_numpy(bars[size // 2:].reshape(-1, 3)).to(color_params.device)
+    bottom = torch.from_numpy(
+        bars[size // 2:].reshape(-1, 3)).to(color_params.device)
     corrected = _apply_h_rgb_forward(H_mean, bottom)
     vis = bars.copy()
-    vis[size // 2:] = corrected.reshape(size // 2, size, 3).clamp(0, 1).detach().cpu().numpy()
+    vis[size // 2:] = corrected.reshape(size // 2,
+                                        size, 3).clamp(0, 1).detach().cpu().numpy()
     _show_image(ax_img, vis, "Mean Color Correction Visualization")
     ax_img.text(
         size * 0.5, 20, "Original", ha="center", va="top", color="white",
@@ -509,10 +527,14 @@ def _apply_crf(
 ) -> torch.Tensor:
     """Apply CRF with center split."""
     x = torch.clamp(x, 0.0, 1.0)
-    a = (shoulder * center) / torch.clamp(torch.lerp(toe, shoulder, center), min=1.0e-12)
+    a = (shoulder * center) / \
+        torch.clamp(torch.lerp(toe, shoulder, center), min=1.0e-12)
     b = 1.0 - a
-    left = a * torch.pow(torch.clamp(x / torch.clamp(center, min=1.0e-12), 0.0, 1.0), toe)
-    right = 1.0 - b * torch.pow(torch.clamp((1.0 - x) / torch.clamp(1.0 - center, min=1.0e-12), 0.0, 1.0), shoulder)
+    left = a * \
+        torch.pow(torch.clamp(
+            x / torch.clamp(center, min=1.0e-12), 0.0, 1.0), toe)
+    right = 1.0 - b * torch.pow(torch.clamp((1.0 - x) /
+                                torch.clamp(1.0 - center, min=1.0e-12), 0.0, 1.0), shoulder)
     y0 = torch.where(x <= center, left, right)
     y = torch.pow(torch.clamp(y0, 0.0, 1.0), gamma)
     return torch.clamp(y, 0.0, 1.0)
@@ -536,8 +558,10 @@ def _plot_crf(fig, gs, crf_params: torch.Tensor, cam: int):
             color=cols[ch], linewidth=2.0, label=["Red", "Green", "Blue"][ch],
         )
         center_x = float(center.detach().cpu().item())
-        center_y = float(_apply_crf(toe, shoulder, gamma, center, center).detach().cpu().item())
-        ax_plot.scatter([center_x], [center_y], color=cols[ch], s=18, zorder=6, marker="o")
+        center_y = float(_apply_crf(toe, shoulder, gamma,
+                         center, center).detach().cpu().item())
+        ax_plot.scatter([center_x], [center_y], color=cols[ch],
+                        s=18, zorder=6, marker="o")
     ax_plot.axvline(1.0, color="black", linestyle="--", alpha=0.5)
     ax_plot.set_xlabel("Linear Input Intensity")
     ax_plot.set_ylabel("Output Intensity")
@@ -546,12 +570,14 @@ def _plot_crf(fig, gs, crf_params: torch.Tensor, cam: int):
     ax_plot.legend()
 
     img = _gray_bars(256)
-    xin = torch.from_numpy(img[img.shape[0] // 2:, :, 0].copy()).to(crf_params.device)
+    xin = torch.from_numpy(
+        img[img.shape[0] // 2:, :, 0].copy()).to(crf_params.device)
     xin_lin = xin.flatten()
     for ch in range(3):
         toe, shoulder, gamma, center = _crf_effective_from_raw(crf_cam[ch])
         y = _apply_crf(toe, shoulder, gamma, center, xin_lin)
-        img[img.shape[0] // 2:, :, ch] = y.reshape(img.shape[0] // 2, img.shape[1]).cpu().numpy()
+        img[img.shape[0] // 2:, :,
+            ch] = y.reshape(img.shape[0] // 2, img.shape[1]).cpu().numpy()
     img = _srgb_inverse_oetf(img)
     _show_image(ax_img, img, "Tone Mapping Visualization")
     size = img.shape[0]
@@ -632,7 +658,8 @@ def export_ppisp_report(
         row_idx = 0
 
         # Row 0: Exposure
-        _plot_exposure(fig, gs[row_idx], ppisp.exposure_params, frames_per_camera, cam)
+        _plot_exposure(fig, gs[row_idx],
+                       ppisp.exposure_params, frames_per_camera, cam)
         row_idx += 1
 
         # Row 1: Vignetting
@@ -640,7 +667,8 @@ def export_ppisp_report(
         row_idx += 1
 
         # Rows 2-3: Color correction
-        _plot_color(fig, gs[row_idx], gs[row_idx + 1], ppisp.color_params, frames_per_camera, cam)
+        _plot_color(fig, gs[row_idx], gs[row_idx + 1],
+                    ppisp.color_params, frames_per_camera, cam)
         row_idx += 2
 
         # Row 4: CRF
@@ -648,7 +676,8 @@ def export_ppisp_report(
 
         plt.tight_layout()
         cam_label = camera_names[cam] if camera_names[cam] else f"camera_{cam}"
-        safe_label = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in cam_label)
+        safe_label = "".join(c if c.isalnum() or c in (
+            "-", "_") else "_" for c in cam_label)
         out_path = output_dir / f"{safe_label}_ppisp_report.pdf"
         plt.savefig(out_path, bbox_inches="tight")
         plt.close(fig)
@@ -677,18 +706,22 @@ def _export_params_json(
     vig = {}
     for cam in range(num_cams):
         cam_label = camera_names[cam] if camera_names[cam] else f"camera_{cam}"
-        safe_label = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in cam_label)
+        safe_label = "".join(c if c.isalnum() or c in (
+            "-", "_") else "_" for c in cam_label)
         vig_cam = {}
         # Per-channel vignetting
         for ch, ch_name in enumerate(["red", "green", "blue"]):
-            oc = ppisp.vignetting_params[cam, ch, :2].detach().float().cpu().tolist()
-            alphas = ppisp.vignetting_params[cam, ch, 2:].detach().float().cpu().tolist()
+            oc = ppisp.vignetting_params[cam, ch,
+                                         :2].detach().float().cpu().tolist()
+            alphas = ppisp.vignetting_params[cam,
+                                             ch, 2:].detach().float().cpu().tolist()
             vig_cam[ch_name] = {"optical_center": oc, "alphas": alphas}
         vig[safe_label] = vig_cam
 
     # Color
     color_per_frame = []
-    color_real = _color_offsets_from_params(ppisp.color_params).detach().float().cpu().numpy()
+    color_real = _color_offsets_from_params(
+        ppisp.color_params).detach().float().cpu().numpy()
     for i in range(color_real.shape[0]):
         color_per_frame.append({
             "blue": color_real[i, 0].tolist(),
@@ -701,12 +734,14 @@ def _export_params_json(
     crf = {}
     for cam in range(num_cams):
         cam_label = camera_names[cam] if camera_names[cam] else f"camera_{cam}"
-        safe_label = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in cam_label)
+        safe_label = "".join(c if c.isalnum() or c in (
+            "-", "_") else "_" for c in cam_label)
         crf_cam = {}
         crf_cam_params = ppisp.crf_params[cam]
         for ch, ch_name in enumerate(["red", "green", "blue"]):
             raw = crf_cam_params[ch].detach().float().cpu()
-            toe, shoulder, gamma, center = _crf_effective_from_raw(crf_cam_params[ch])
+            toe, shoulder, gamma, center = _crf_effective_from_raw(
+                crf_cam_params[ch])
             crf_cam[ch_name] = {
                 "raw": {
                     "toe_raw": float(raw[0].item()),
@@ -739,4 +774,3 @@ def _export_params_json(
         json.dump(json_obj, f, indent=2)
 
     return json_out
-

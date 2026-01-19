@@ -680,4 +680,3 @@ __device__ __forceinline__ void apply_crf_ppisp(const float3 &rgb_in,
 
     rgb_out = make_float3(out_arr[0], out_arr[1], out_arr[2]);
 }
-

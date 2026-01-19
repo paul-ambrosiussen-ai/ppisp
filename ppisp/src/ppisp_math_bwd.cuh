@@ -29,22 +29,19 @@
 // forward: out = dot(a, b) = a.x*b.x + a.y*b.y
 // backward: d_a = grad_output * b, d_b = grad_output * a
 __device__ __forceinline__ void dot_bwd(float grad_output, const float2 &a, const float2 &b,
-                                        float2 &grad_a, float2 &grad_b)
-{
+                                        float2 &grad_a, float2 &grad_b) {
     grad_a = grad_output * b;
     grad_b = grad_output * a;
 }
 
 __device__ __forceinline__ void dot_bwd(float grad_output, const float3 &a, const float3 &b,
-                                        float3 &grad_a, float3 &grad_b)
-{
+                                        float3 &grad_a, float3 &grad_b) {
     grad_a = grad_output * b;
     grad_b = grad_output * a;
 }
 
 __device__ __forceinline__ void dot_bwd(float grad_output, const float4 &a, const float4 &b,
-                                        float4 &grad_a, float4 &grad_b)
-{
+                                        float4 &grad_a, float4 &grad_b) {
     grad_a = grad_output * b;
     grad_b = grad_output * a;
 }
@@ -53,8 +50,7 @@ __device__ __forceinline__ void dot_bwd(float grad_output, const float4 &a, cons
 // forward: out = cross(a, b) = a x b
 // backward: grad_a = b x grad_out, grad_b = grad_out x a
 __device__ __forceinline__ void cross_bwd(const float3 &grad_output, const float3 &a,
-                                          const float3 &b, float3 &grad_a, float3 &grad_b)
-{
+                                          const float3 &b, float3 &grad_a, float3 &grad_b) {
     grad_a = cross(b, grad_output);
     grad_b = cross(grad_output, a);
 }
@@ -62,14 +58,12 @@ __device__ __forceinline__ void cross_bwd(const float3 &grad_output, const float
 // Length backward
 // forward: out = sqrt(dot(a, a))
 // backward: d_a = grad_output * a / length(a)
-__device__ __forceinline__ void length_bwd(float grad_output, const float2 &a, float2 &grad_a)
-{
+__device__ __forceinline__ void length_bwd(float grad_output, const float2 &a, float2 &grad_a) {
     float len = length(a);
     grad_a = (grad_output / (len + 1e-8f)) * a;
 }
 
-__device__ __forceinline__ void length_bwd(float grad_output, const float3 &a, float3 &grad_a)
-{
+__device__ __forceinline__ void length_bwd(float grad_output, const float3 &a, float3 &grad_a) {
     float len = length(a);
     grad_a = (grad_output / (len + 1e-8f)) * a;
 }
@@ -78,16 +72,14 @@ __device__ __forceinline__ void length_bwd(float grad_output, const float3 &a, f
 // forward: out = a / length(a)
 // backward: d_a = (grad_out - dot(grad_out, out) * out) / length(a)
 __device__ __forceinline__ void normalize_bwd(const float2 &grad_output, const float2 &a,
-                                              const float2 &normalized_a, float2 &grad_a)
-{
+                                              const float2 &normalized_a, float2 &grad_a) {
     float len = length(a);
     float dot_val = dot(grad_output, normalized_a);
     grad_a = (grad_output - dot_val * normalized_a) / (len + 1e-8f);
 }
 
 __device__ __forceinline__ void normalize_bwd(const float3 &grad_output, const float3 &a,
-                                              const float3 &normalized_a, float3 &grad_a)
-{
+                                              const float3 &normalized_a, float3 &grad_a) {
     float len = length(a);
     float dot_val = dot(grad_output, normalized_a);
     grad_a = (grad_output - dot_val * normalized_a) / (len + 1e-8f);
@@ -101,19 +93,16 @@ __device__ __forceinline__ void normalize_bwd(const float3 &grad_output, const f
 // Given: grad_y (gradient w.r.t. output y)
 // Compute: grad_A, grad_x
 __device__ __forceinline__ void mul_bwd(const float2x2 &A, const float2 &x, const float2 &grad_y,
-                                        float2x2 &grad_A, float2 &grad_x)
-{
+                                        float2x2 &grad_A, float2 &grad_x) {
     // grad_x = A^T * grad_y
     grad_x = transpose(A) * grad_y;
 
     // grad_A = grad_y x x^T (outer product)
 #pragma unroll
-    for (int i = 0; i < 2; i++)
-    {
+    for (int i = 0; i < 2; i++) {
         float grad_y_i = (i == 0) ? grad_y.x : grad_y.y;
 #pragma unroll
-        for (int j = 0; j < 2; j++)
-        {
+        for (int j = 0; j < 2; j++) {
             float x_j = (j == 0) ? x.x : x.y;
             grad_A(i, j) = grad_y_i * x_j;
         }
@@ -121,22 +110,17 @@ __device__ __forceinline__ void mul_bwd(const float2x2 &A, const float2 &x, cons
 }
 
 __device__ __forceinline__ void mul_bwd(const float3x3 &A, const float3 &x, const float3 &grad_y,
-                                        float3x3 &grad_A, float3 &grad_x)
-{
+                                        float3x3 &grad_A, float3 &grad_x) {
     // grad_x = A^T * grad_y
     grad_x = transpose(A) * grad_y;
 
     // grad_A = grad_y x x^T (outer product)
 #pragma unroll
-    for (int i = 0; i < 3; i++)
-    {
-        float grad_y_i = (i == 0) ? grad_y.x : (i == 1) ? grad_y.y
-                                                        : grad_y.z;
+    for (int i = 0; i < 3; i++) {
+        float grad_y_i = (i == 0) ? grad_y.x : (i == 1) ? grad_y.y : grad_y.z;
 #pragma unroll
-        for (int j = 0; j < 3; j++)
-        {
-            float x_j = (j == 0) ? x.x : (j == 1) ? x.y
-                                                  : x.z;
+        for (int j = 0; j < 3; j++) {
+            float x_j = (j == 0) ? x.x : (j == 1) ? x.y : x.z;
             grad_A(i, j) = grad_y_i * x_j;
         }
     }
@@ -147,8 +131,7 @@ __device__ __forceinline__ void mul_bwd(const float3x3 &A, const float3 &x, cons
 // Compute: grad_A, grad_B
 __device__ __forceinline__ void mul_mat_bwd(const float2x2 &A, const float2x2 &B,
                                             const float2x2 &grad_C, float2x2 &grad_A,
-                                            float2x2 &grad_B)
-{
+                                            float2x2 &grad_B) {
     // grad_A = grad_C * B^T
     grad_A = grad_C * transpose(B);
 
@@ -158,8 +141,7 @@ __device__ __forceinline__ void mul_mat_bwd(const float2x2 &A, const float2x2 &B
 
 __device__ __forceinline__ void mul_mat_bwd(const float3x3 &A, const float3x3 &B,
                                             const float3x3 &grad_C, float3x3 &grad_A,
-                                            float3x3 &grad_B)
-{
+                                            float3x3 &grad_B) {
     // grad_A = grad_C * B^T
     grad_A = grad_C * transpose(B);
 
@@ -170,13 +152,11 @@ __device__ __forceinline__ void mul_mat_bwd(const float3x3 &A, const float3x3 &B
 // Transpose backward (transpose is self-adjoint)
 // Given: grad_AT (gradient w.r.t. output A^T)
 // Compute: grad_A
-__device__ __forceinline__ float2x2 transpose_bwd(const float2x2 &grad_AT)
-{
+__device__ __forceinline__ float2x2 transpose_bwd(const float2x2 &grad_AT) {
     return transpose(grad_AT);
 }
 
-__device__ __forceinline__ float3x3 transpose_bwd(const float3x3 &grad_AT)
-{
+__device__ __forceinline__ float3x3 transpose_bwd(const float3x3 &grad_AT) {
     return transpose(grad_AT);
 }
 
@@ -188,8 +168,7 @@ __device__ __forceinline__ float3x3 transpose_bwd(const float3x3 &grad_AT)
 // forward: out = clamp(x, min, max)
 // backward: d_x = grad_out if min <= x <= max else 0
 __device__ __forceinline__ void clamp_bwd(const float3 &grad_output, const float3 &x, float min_val,
-                                          float max_val, float3 &grad_x)
-{
+                                          float max_val, float3 &grad_x) {
     grad_x.x = (x.x > min_val && x.x < max_val) ? grad_output.x : 0.0f;
     grad_x.y = (x.y > min_val && x.y < max_val) ? grad_output.y : 0.0f;
     grad_x.z = (x.z > min_val && x.z < max_val) ? grad_output.z : 0.0f;
@@ -200,8 +179,7 @@ __device__ __forceinline__ void clamp_bwd(const float3 &grad_output, const float
 // backward: d_a = grad_out * (1 - t), d_b = grad_out * t, d_t = grad_out *
 // (b - a)
 __device__ __forceinline__ void lerp_bwd(float grad_output, float a, float b, float t,
-                                         float &grad_a, float &grad_b, float &grad_t)
-{
+                                         float &grad_a, float &grad_b, float &grad_t) {
     grad_a = grad_output * (1.0f - t);
     grad_b = grad_output * t;
     grad_t = grad_output * (b - a);
@@ -209,8 +187,7 @@ __device__ __forceinline__ void lerp_bwd(float grad_output, float a, float b, fl
 
 __device__ __forceinline__ void lerp_bwd(const float3 &grad_output, const float3 &a,
                                          const float3 &b, float t, float3 &grad_a, float3 &grad_b,
-                                         float &grad_t)
-{
+                                         float &grad_t) {
     grad_a = grad_output * (1.0f - t);
     grad_b = grad_output * t;
     grad_t = dot(grad_output, b - a);
@@ -221,15 +198,13 @@ __device__ __forceinline__ void lerp_bwd(const float3 &grad_output, const float3
 // backward: d_x = grad_out * exp * pow(x, exp - 1), d_exp = grad_out * out *
 // log(x)
 __device__ __forceinline__ void pow_bwd(float grad_output, float x, float exp, float output,
-                                        float &grad_x, float &grad_exp)
-{
+                                        float &grad_x, float &grad_exp) {
     grad_x = grad_output * exp * __powf(x, exp - 1.0f);
     grad_exp = grad_output * output * __logf(x + 1e-8f);
 }
 
 __device__ __forceinline__ void pow_bwd(const float3 &grad_output, const float3 &x, float exp,
-                                        const float3 &output, float3 &grad_x, float &grad_exp)
-{
+                                        const float3 &output, float3 &grad_x, float &grad_exp) {
     grad_x.x = grad_output.x * exp * __powf(x.x, exp - 1.0f);
     grad_x.y = grad_output.y * exp * __powf(x.y, exp - 1.0f);
     grad_x.z = grad_output.z * exp * __powf(x.z, exp - 1.0f);
@@ -240,8 +215,7 @@ __device__ __forceinline__ void pow_bwd(const float3 &grad_output, const float3 
 
 __device__ __forceinline__ void pow_bwd(const float3 &grad_output, const float3 &x,
                                         const float3 &exp, const float3 &output, float3 &grad_x,
-                                        float3 &grad_exp)
-{
+                                        float3 &grad_exp) {
     grad_x.x = grad_output.x * exp.x * __powf(x.x, exp.x - 1.0f);
     grad_x.y = grad_output.y * exp.y * __powf(x.y, exp.y - 1.0f);
     grad_x.z = grad_output.z * exp.z * __powf(x.z, exp.z - 1.0f);
@@ -267,35 +241,30 @@ __device__ __forceinline__ void pow_bwd(const float3 &grad_output, const float3 
 // ============================================================================
 
 // exp backward: d_x = grad_out * exp(x) = grad_out * output
-__device__ __forceinline__ void exp_bwd(float grad_output, float output, float &grad_x)
-{
+__device__ __forceinline__ void exp_bwd(float grad_output, float output, float &grad_x) {
     grad_x = grad_output * output;
 }
 
 // exp2 backward: d_x = grad_out * log(2) * exp2(x) = grad_out * log(2) *
 // output
-__device__ __forceinline__ void exp2_bwd(float grad_output, float output, float &grad_x)
-{
-    grad_x = grad_output * 0.69314718f * output; // log(2)
+__device__ __forceinline__ void exp2_bwd(float grad_output, float output, float &grad_x) {
+    grad_x = grad_output * 0.69314718f * output;  // log(2)
 }
 
 // log backward: d_x = grad_out / x
-__device__ __forceinline__ void log_bwd(float grad_output, float x, float &grad_x)
-{
+__device__ __forceinline__ void log_bwd(float grad_output, float x, float &grad_x) {
     grad_x = __fdividef(grad_output, x + 1e-8f);
 }
 
 // sqrt backward: d_x = grad_out / (2 * sqrt(x)) = grad_out / (2 * output)
-__device__ __forceinline__ void sqrt_bwd(float grad_output, float output, float &grad_x)
-{
+__device__ __forceinline__ void sqrt_bwd(float grad_output, float output, float &grad_x) {
     grad_x = __fdividef(grad_output, 2.0f * output + 1e-8f);
 }
 
 // Division backward: out = a / b
 // d_a = grad_out / b, d_b = -grad_out * a / (b * b)
 __device__ __forceinline__ void div_bwd(float grad_output, float a, float b, float output,
-                                        float &grad_a, float &grad_b)
-{
+                                        float &grad_a, float &grad_b) {
     grad_a = __fdividef(grad_output, b);
     grad_b = -grad_output * __fdividef(output, b);
 }
@@ -307,8 +276,7 @@ __device__ __forceinline__ void div_bwd(float grad_output, float a, float b, flo
 // Softplus backward (for bounded positive parameters)
 // forward: out = min_value + log(1 + exp(raw))
 // backward: d_raw = grad_out * sigmoid(raw)
-__device__ __forceinline__ void softplus_bwd(float grad_output, float raw, float &grad_raw)
-{
+__device__ __forceinline__ void softplus_bwd(float grad_output, float raw, float &grad_raw) {
     float sigmoid = __fdividef(1.0f, 1.0f + __expf(-raw));
     grad_raw = grad_output * sigmoid;
 }
@@ -316,8 +284,7 @@ __device__ __forceinline__ void softplus_bwd(float grad_output, float raw, float
 // Sigmoid backward (for clamped parameters)
 // forward: out = 1 / (1 + exp(-raw))
 // backward: d_raw = grad_out * out * (1 - out)
-__device__ __forceinline__ void sigmoid_bwd(float grad_output, float output, float &grad_raw)
-{
+__device__ __forceinline__ void sigmoid_bwd(float grad_output, float output, float &grad_raw) {
     grad_raw = grad_output * output * (1.0f - output);
 }
 
@@ -330,8 +297,7 @@ __device__ __forceinline__ void sigmoid_bwd(float grad_output, float output, flo
 __device__ __forceinline__ void vignetting_bwd(float grad_output, float r2, float alpha0,
                                                float alpha1, float alpha2, float &grad_r2,
                                                float &grad_alpha0, float &grad_alpha1,
-                                               float &grad_alpha2)
-{
+                                               float &grad_alpha2) {
     float r4 = r2 * r2;
     float r6 = r4 * r2;
 
@@ -347,8 +313,7 @@ __device__ __forceinline__ void vignetting_bwd(float grad_output, float r2, floa
 //           d_y1 = grad_out * w
 //           d_w = grad_out * (y1 - y0)
 __device__ __forceinline__ void lerp_interp_bwd(float grad_output, float y0, float y1, float w,
-                                                float &grad_y0, float &grad_y1, float &grad_w)
-{
+                                                float &grad_y0, float &grad_y1, float &grad_w) {
     grad_y0 = grad_output * (1.0f - w);
     grad_y1 = grad_output * w;
     grad_w = grad_output * (y1 - y0);
@@ -362,8 +327,7 @@ __device__ __forceinline__ void lerp_interp_bwd(float grad_output, float y0, flo
 // This is a softplus function shifted by min_val
 // Derivative: f'(x) = exp(x) / (1 + exp(x)) = sigmoid(x)
 __device__ __forceinline__ float bounded_positive_backward(float raw, float min_value,
-                                                           float grad_output)
-{
+                                                           float grad_output) {
     float exp_x = __expf(raw);
     float sigmoid = __fdividef(exp_x, 1.0f + exp_x);
     return grad_output * sigmoid;
@@ -371,8 +335,7 @@ __device__ __forceinline__ float bounded_positive_backward(float raw, float min_
 
 // Gradient of clamped_forward: f(x) = 1 / (1 + exp(-x)) = sigmoid(x)
 // Derivative: f'(x) = sigmoid(x) * (1 - sigmoid(x))
-__device__ __forceinline__ float clamped_backward(float raw, float grad_output)
-{
+__device__ __forceinline__ float clamped_backward(float raw, float grad_output) {
     float exp_neg_x = __expf(-raw);
     float sigmoid = __fdividef(1.0f, 1.0f + exp_neg_x);
     return grad_output * sigmoid * (1.0f - sigmoid);
@@ -387,8 +350,7 @@ __device__ __forceinline__ float clamped_backward(float raw, float grad_output)
 // ----------------------------------------------------------------------------
 __device__ __forceinline__ void apply_exposure_bwd(const float3 &rgb_in, float exposure_param,
                                                    const float3 &grad_rgb_out, float3 &grad_rgb_in,
-                                                   float &grad_exposure_param)
-{
+                                                   float &grad_exposure_param) {
     // Forward: rgb_out = rgb_in * exp2(exposure_param)
     float exposure_factor = exp2f(exposure_param);
 
@@ -398,7 +360,7 @@ __device__ __forceinline__ void apply_exposure_bwd(const float3 &rgb_in, float e
     // d/d_exp[rgb_in * exp2(exp)] = rgb_in * exp2(exp) * ln(2) = rgb_out * ln(2)
     // grad_exposure = grad_rgb_out * (rgb_out * ln(2))
     float3 rgb_out = rgb_in * exposure_factor;
-    grad_exposure_param = dot(grad_rgb_out, rgb_out) * 0.69314718f; // ln(2)
+    grad_exposure_param = dot(grad_rgb_out, rgb_out) * 0.69314718f;  // ln(2)
 
     // Gradient to input
     grad_rgb_in = grad_rgb_out * exposure_factor;
@@ -410,8 +372,7 @@ __device__ __forceinline__ void apply_exposure_bwd(const float3 &rgb_in, float e
 __device__ __forceinline__ void apply_vignetting_bwd(
     const float3 &rgb_in, const VignettingChannelParams *vignetting_params,
     const float2 &pixel_coords, float resolution_x, float resolution_y, const float3 &grad_rgb_out,
-    float3 &grad_rgb_in, VignettingChannelParams *grad_vignetting_params)
-{
+    float3 &grad_rgb_in, VignettingChannelParams *grad_vignetting_params) {
     // Recompute forward
     float max_res = fmaxf(resolution_x, resolution_y);
     float2 uv = make_float2(__fdividef(pixel_coords.x - resolution_x * 0.5f, max_res),
@@ -422,8 +383,7 @@ __device__ __forceinline__ void apply_vignetting_bwd(
     float grad_rgb_in_arr[3] = {0, 0, 0};
 
 #pragma unroll
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         const VignettingChannelParams &params = vignetting_params[i];
 
         float dx = uv.x - params.cx;
@@ -444,8 +404,7 @@ __device__ __forceinline__ void apply_vignetting_bwd(
 
         // Only compute gradients if not clamped
         // Use >= and <= to include boundary cases (falloff == 0.0 or falloff == 1.0)
-        if (falloff >= 0.0f && falloff <= 1.0f)
-        {
+        if (falloff >= 0.0f && falloff <= 1.0f) {
             // Gradient to alphas
             grad_vignetting_params[i].alpha0 += grad_falloff * r2;
             grad_vignetting_params[i].alpha1 += grad_falloff * r4;
@@ -471,12 +430,10 @@ __device__ __forceinline__ void apply_vignetting_bwd(
 // Given grad_H_normalized, compute grad_H_unnormalized
 __device__ __forceinline__ void compute_homography_normalization_bwd(const float3x3 &H_unnorm,
                                                                      const float3x3 &grad_H_norm,
-                                                                     float3x3 &grad_H_unnorm)
-{
+                                                                     float3x3 &grad_H_unnorm) {
     float s = H_unnorm(2, 2);
 
-    if (fabsf(s) > 1.0e-20f)
-    {
+    if (fabsf(s) > 1.0e-20f) {
         float inv_s = 1.0f / s;
         float inv_s2 = inv_s * inv_s;
 
@@ -485,21 +442,17 @@ __device__ __forceinline__ void compute_homography_normalization_bwd(const float
         float grad_s = 0.0f;
 
 #pragma unroll
-        for (int i = 0; i < 9; i++)
-        {
+        for (int i = 0; i < 9; i++) {
             grad_H_unnorm.m[i] = grad_H_norm.m[i] * inv_s;
             grad_s += -grad_H_norm.m[i] * H_unnorm.m[i] * inv_s2;
         }
 
         // Gradient flows back to H_unnorm[2][2]
         grad_H_unnorm(2, 2) += grad_s;
-    }
-    else
-    {
+    } else {
         // No normalization occurred, gradient passes through unchanged
 #pragma unroll
-        for (int i = 0; i < 9; i++)
-        {
+        for (int i = 0; i < 9; i++) {
             grad_H_unnorm.m[i] = grad_H_norm.m[i];
         }
     }
@@ -508,8 +461,7 @@ __device__ __forceinline__ void compute_homography_normalization_bwd(const float
 // Backward for diagonal matrix construction: D = diag(lambda)
 // Given grad_D, compute grad_lambda
 __device__ __forceinline__ void compute_homography_diagonal_matrix_bwd(const float3x3 &grad_D,
-                                                                       float3 &grad_lambda)
-{
+                                                                       float3 &grad_lambda) {
     grad_lambda.x = grad_D(0, 0);
     grad_lambda.y = grad_D(1, 1);
     grad_lambda.z = grad_D(2, 2);
@@ -518,8 +470,7 @@ __device__ __forceinline__ void compute_homography_diagonal_matrix_bwd(const flo
 // Backward for skew-symmetric matrix construction from t_gray
 // skew = [[0, -t_gray.z, t_gray.y], [t_gray.z, 0, -t_gray.x], [-t_gray.y, t_gray.x, 0]]
 __device__ __forceinline__ void compute_homography_skew_matrix_construction_bwd(
-    const float3x3 &grad_skew, float3 &grad_t_gray)
-{
+    const float3x3 &grad_skew, float3 &grad_t_gray) {
     grad_t_gray.x = 0.0f;
     grad_t_gray.y = 0.0f;
     grad_t_gray.z = 0.0f;
@@ -543,8 +494,7 @@ __device__ __forceinline__ void compute_homography_skew_matrix_construction_bwd(
 __device__ __forceinline__ void compute_homography_matrix_T_construction_bwd(const float3x3 &grad_T,
                                                                              float3 &grad_t_b,
                                                                              float3 &grad_t_r,
-                                                                             float3 &grad_t_g)
-{
+                                                                             float3 &grad_t_g) {
     // T is column-major: T(i,j) where j selects column (t_b=0, t_r=1, t_g=2)
     grad_t_b.x = grad_T(0, 0);
     grad_t_b.y = grad_T(1, 0);
@@ -561,8 +511,7 @@ __device__ __forceinline__ void compute_homography_matrix_T_construction_bwd(con
 
 // Backward for target point construction: t = base + make_float3(offset.x, offset.y, 0)
 __device__ __forceinline__ void compute_homography_target_point_bwd(const float3 &grad_t,
-                                                                    float2 &grad_offset)
-{
+                                                                    float2 &grad_offset) {
     grad_offset.x = grad_t.x;
     grad_offset.y = grad_t.y;
     // grad_t.z doesn't contribute to offset (z is constant 1.0)
@@ -571,8 +520,7 @@ __device__ __forceinline__ void compute_homography_target_point_bwd(const float3
 // Backward for nullspace computation via cross products with conditionals
 // This handles the conditional logic in computing lambda
 __device__ __forceinline__ void compute_homography_nullspace_computation_bwd(
-    const float3x3 &M, const float3 &lambda_v, const float3x3 &grad_M_in, float3x3 &grad_M)
-{
+    const float3x3 &M, const float3 &lambda_v, const float3x3 &grad_M_in, float3x3 &grad_M) {
     // Extract rows
     float3 r0 = make_float3(M(0, 0), M(0, 1), M(0, 2));
     float3 r1 = make_float3(M(1, 0), M(1, 1), M(1, 2));
@@ -595,23 +543,17 @@ __device__ __forceinline__ void compute_homography_nullspace_computation_bwd(
     float3 grad_r2 = make_float3(0.0f, 0.0f, 0.0f);
 
     // Determine which branch was taken and backprop accordingly
-    if (n2 < 1.0e-20f)
-    {
+    if (n2 < 1.0e-20f) {
         lambda_test = cross(r0, r2);
         n2 = dot(lambda_test, lambda_test);
-        if (n2 < 1.0e-20f)
-        {
+        if (n2 < 1.0e-20f) {
             // lambda_v = cross(r1, r2)
             cross_bwd(grad_lambda, r1, r2, grad_r1, grad_r2);
-        }
-        else
-        {
+        } else {
             // lambda_v = cross(r0, r2)
             cross_bwd(grad_lambda, r0, r2, grad_r0, grad_r2);
         }
-    }
-    else
-    {
+    } else {
         // lambda_v = cross(r0, r1)
         cross_bwd(grad_lambda, r0, r1, grad_r0, grad_r1);
     }
@@ -643,8 +585,7 @@ __device__ __forceinline__ void compute_homography_nullspace_computation_bwd(
  */
 __device__ __forceinline__ void compute_homography_bwd(const ColorPPISPParams *color_params,
                                                        const float3x3 &grad_H,
-                                                       ColorPPISPParams *grad_color_params)
-{
+                                                       ColorPPISPParams *grad_color_params) {
     // ========================================================================
     // Step 1: Recompute forward pass to get all intermediates
     // ========================================================================
@@ -700,12 +641,10 @@ __device__ __forceinline__ void compute_homography_bwd(const ColorPPISPParams *c
     float3 lambda_v = cross(r0, r1);
     float n2 = dot(lambda_v, lambda_v);
 
-    if (n2 < 1.0e-20f)
-    {
+    if (n2 < 1.0e-20f) {
         lambda_v = cross(r0, r2);
         n2 = dot(lambda_v, lambda_v);
-        if (n2 < 1.0e-20f)
-        {
+        if (n2 < 1.0e-20f) {
             lambda_v = cross(r1, r2);
         }
     }
@@ -754,8 +693,7 @@ __device__ __forceinline__ void compute_homography_bwd(const ColorPPISPParams *c
 
     // Accumulate gradient to T
 #pragma unroll
-    for (int i = 0; i < 9; i++)
-    {
+    for (int i = 0; i < 9; i++) {
         grad_T.m[i] += grad_T_from_M.m[i];
     }
 
@@ -799,8 +737,7 @@ __device__ __forceinline__ void compute_homography_bwd(const ColorPPISPParams *c
 // ----------------------------------------------------------------------------
 __device__ __forceinline__ void apply_color_correction_ppisp_bwd(
     const float3 &rgb_in, const ColorPPISPParams *color_params, const float3 &grad_rgb_out,
-    float3 &grad_rgb_in, ColorPPISPParams *grad_color_params)
-{
+    float3 &grad_rgb_in, ColorPPISPParams *grad_color_params) {
     // Recompute forward
     float3x3 H = compute_homography(color_params);
 
@@ -841,8 +778,7 @@ __device__ __forceinline__ void apply_color_correction_ppisp_bwd(
 
     // Gradient through intensity (intensity = rgb_in.x + rgb_in.y + rgb_in.z)
     float grad_intensity = 0.0f;
-    if (intensity > 1e-8f)
-    {
+    if (intensity > 1e-8f) {
         grad_intensity = grad_norm_factor * norm_factor / intensity;
     }
 
@@ -861,16 +797,14 @@ __device__ __forceinline__ void apply_color_correction_ppisp_bwd(
 __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
                                                     const CRFPPISPChannelParams *crf_params,
                                                     const float3 &grad_rgb_out, float3 &grad_rgb_in,
-                                                    CRFPPISPChannelParams *grad_crf_params)
-{
+                                                    CRFPPISPChannelParams *grad_crf_params) {
     float3 rgb_clamped = clamp(rgb_in, 0.0f, 1.0f);
     float rgb_arr[3] = {rgb_clamped.x, rgb_clamped.y, rgb_clamped.z};
     float grad_out_arr[3] = {grad_rgb_out.x, grad_rgb_out.y, grad_rgb_out.z};
     float grad_in_arr[3] = {0, 0, 0};
 
 #pragma unroll
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         const CRFPPISPChannelParams &params = crf_params[i];
 
         // Recompute forward
@@ -886,12 +820,9 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
         float x = rgb_arr[i];
         float y;
 
-        if (x <= center)
-        {
+        if (x <= center) {
             y = a * __powf(__fdividef(x, center), toe);
-        }
-        else
-        {
+        } else {
             y = 1.0f - b * __powf(__fdividef(1.0f - x, 1.0f - center), shoulder);
         }
 
@@ -900,26 +831,20 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
 
         // Backward through gamma
         float grad_y = 0.0f;
-        if (y_clamped > 0.0f)
-        {
+        if (y_clamped > 0.0f) {
             grad_y = grad_out_arr[i] * gamma * __powf(y_clamped, gamma - 1.0f);
         }
 
         // Backward through piecewise curve
         float grad_x = 0.0f;
-        if (x <= center && center > 0.0f)
-        {
+        if (x <= center && center > 0.0f) {
             float base = __fdividef(x, center);
-            if (base > 0.0f)
-            {
+            if (base > 0.0f) {
                 grad_x = grad_y * a * toe * __powf(base, toe - 1.0f) / center;
             }
-        }
-        else if (x > center && center < 1.0f)
-        {
+        } else if (x > center && center < 1.0f) {
             float base = __fdividef(1.0f - x, 1.0f - center);
-            if (base > 0.0f)
-            {
+            if (base > 0.0f) {
                 grad_x = grad_y * b * shoulder * __powf(base, shoulder - 1.0f) / (1.0f - center);
             }
         }
@@ -938,8 +863,7 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
         float grad_center = 0.0f;
 
         // Gradient to gamma from output = pow(y_clamped, gamma)
-        if (y_clamped > 0.0f)
-        {
+        if (y_clamped > 0.0f) {
             grad_gamma = grad_out_arr[i] * output * __logf(y_clamped + 1e-8f);
         }
 
@@ -953,12 +877,10 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
         float grad_a = 0.0f;
         float grad_b = 0.0f;
 
-        if (x <= center && center > 0.0f)
-        {
+        if (x <= center && center > 0.0f) {
             // y = a * (x/center)^toe
             float base = __fdividef(x, center);
-            if (base > 0.0f)
-            {
+            if (base > 0.0f) {
                 float powered = __powf(base, toe);
                 grad_a += grad_y * powered;
 
@@ -972,13 +894,10 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
                 float grad_base = grad_y * a * toe * __powf(base, toe - 1.0f);
                 grad_center += grad_base * (-x / (center * center));
             }
-        }
-        else if (x > center && center < 1.0f)
-        {
+        } else if (x > center && center < 1.0f) {
             // y = 1 - b * ((1-x)/(1-center))^shoulder
             float base = __fdividef(1.0f - x, 1.0f - center);
-            if (base > 0.0f)
-            {
+            if (base > 0.0f) {
                 float powered = __powf(base, shoulder);
                 grad_b += -grad_y * powered;
 
@@ -1016,8 +935,7 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
         grad_a += -grad_b;
 
         float grad_lerp_val = 0.0f;
-        if (fabsf(lerp_val) > 1e-8f)
-        {
+        if (fabsf(lerp_val) > 1e-8f) {
             // grad_a (now including contribution from grad_b) contributes to shoulder,
             // center, and lerp_val
             float a_over_lerp = __fdividef(shoulder * center, lerp_val);
@@ -1041,4 +959,3 @@ __device__ __forceinline__ void apply_crf_ppisp_bwd(const float3 &rgb_in,
 
     grad_rgb_in = make_float3(grad_in_arr[0], grad_in_arr[1], grad_in_arr[2]);
 }
-

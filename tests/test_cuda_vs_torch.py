@@ -42,31 +42,31 @@ def create_test_params(
     dtype: torch.dtype = torch.float32,
 ) -> Dict[str, torch.Tensor]:
     """Create PPISP parameters with random values.
-    
+
     Parameters are kept small to ensure numerical stability.
     """
     torch.manual_seed(seed)
-    
+
     # Exposure: [num_frames] - small range to keep output in valid range
     exposure_params = torch.empty(
         num_frames, device=device, dtype=dtype
     ).uniform_(-0.5, 0.5).requires_grad_(True)
-    
+
     # Vignetting: [num_cameras, 3, 5] - small polynomial coefficients
     vignetting_params = torch.empty(
         num_cameras, 3, 5, device=device, dtype=dtype
     ).uniform_(-0.1, 0.1).requires_grad_(True)
-    
+
     # Color correction: [num_frames, 8] - small latent offsets
     color_params = torch.empty(
         num_frames, 8, device=device, dtype=dtype
     ).uniform_(-0.1, 0.1).requires_grad_(True)
-    
+
     # CRF parameters: [num_cameras, 3, 4] - small raw parameter values
     crf_params = torch.empty(
         num_cameras, 3, 4, device=device, dtype=dtype
     ).uniform_(-0.5, 0.5).requires_grad_(True)
-    
+
     return {
         'exposure_params': exposure_params,
         'vignetting_params': vignetting_params,
@@ -86,25 +86,26 @@ def create_test_inputs(
     dtype: torch.dtype = torch.float32,
 ) -> Dict[str, torch.Tensor]:
     """Create consistent test inputs.
-    
+
     RGB values are kept in [0.1, 0.9] range to avoid edge cases in CRF.
     Pixel coordinates avoid edges for stable vignetting gradients.
     """
     torch.manual_seed(seed)
     np.random.seed(seed)
-    
+
     # Random RGB values in [0.1, 0.9] range (avoid edge cases)
-    rgb = torch.empty(batch_size, 3, device=device, dtype=dtype).uniform_(0.1, 0.9)
-    
+    rgb = torch.empty(batch_size, 3, device=device,
+                      dtype=dtype).uniform_(0.1, 0.9)
+
     # Pixel coordinates - avoid edges for stable vignetting
     pixel_coords = torch.empty(batch_size, 2, device=device, dtype=dtype)
     pixel_coords[:, 0].uniform_(0.1 * resolution_w, 0.9 * resolution_w)
     pixel_coords[:, 1].uniform_(0.1 * resolution_h, 0.9 * resolution_h)
-    
+
     # Random camera and frame indices
     camera_idx = torch.randint(0, num_cameras, (1,)).item()
     frame_idx = torch.randint(0, num_frames, (1,)).item()
-    
+
     return {
         'rgb': rgb,
         'pixel_coords': pixel_coords,
@@ -122,7 +123,7 @@ class CUDAAutograd(torch.autograd.Function):
     def forward(ctx, exposure_params, vignetting_params,
                 color_params, crf_params, rgb_in, pixel_coords,
                 resolution_w, resolution_h, camera_idx, frame_idx):
-        
+
         # Ensure contiguous float32
         exposure_params = exposure_params.float().contiguous()
         vignetting_params = vignetting_params.float().contiguous()
@@ -211,11 +212,12 @@ def compute_relative_error(a: torch.Tensor, b: torch.Tensor, eps: float = 1e-8) 
 def test_forward_basic():
     """Test basic forward pass equivalence."""
     params = create_test_params(num_cameras=2, num_frames=5, seed=42)
-    inputs = create_test_inputs(batch_size=256, num_cameras=2, num_frames=5, seed=42)
-    
+    inputs = create_test_inputs(
+        batch_size=256, num_cameras=2, num_frames=5, seed=42)
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"Forward pass max diff: {max_diff}"
 
@@ -224,14 +226,16 @@ def test_forward_multiple_iterations():
     """Test forward pass with multiple random parameter configurations."""
     num_iterations = 10
     atol = 1e-5  # Relaxed tolerance for float32 precision
-    
+
     for iteration in range(num_iterations):
-        params = create_test_params(num_cameras=2, num_frames=5, seed=42 + iteration)
-        inputs = create_test_inputs(batch_size=256, num_cameras=2, num_frames=5, seed=100 + iteration)
-        
+        params = create_test_params(
+            num_cameras=2, num_frames=5, seed=42 + iteration)
+        inputs = create_test_inputs(
+            batch_size=256, num_cameras=2, num_frames=5, seed=100 + iteration)
+
         rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
         rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-        
+
         max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
         assert max_diff <= atol, f"Iteration {iteration}: max_diff={max_diff}"
 
@@ -241,10 +245,10 @@ def test_forward_different_batch_sizes():
     for batch_size in [1, 16, 128, 512, 1024]:
         params = create_test_params(seed=42)
         inputs = create_test_inputs(batch_size=batch_size, seed=42)
-        
+
         rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
         rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-        
+
         max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
         assert max_diff < 3e-6, f"Batch size {batch_size}: max_diff={max_diff}"
 
@@ -252,19 +256,19 @@ def test_forward_different_batch_sizes():
 def test_forward_identity_params():
     """Test forward pass with identity parameters (zeros)."""
     params = create_test_params(seed=42)
-    
+
     # Set all params to zero (identity transform)
     with torch.no_grad():
         params['exposure_params'].zero_()
         params['vignetting_params'].zero_()
         params['color_params'].zero_()
         params['crf_params'].zero_()
-    
+
     inputs = create_test_inputs(batch_size=256, seed=42)
-    
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"Identity params max_diff={max_diff}"
 
@@ -274,10 +278,10 @@ def test_forward_no_camera_effects():
     params = create_test_params(seed=42)
     inputs = create_test_inputs(batch_size=256, seed=42)
     inputs['camera_idx'] = -1
-    
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"No camera effects max_diff={max_diff}"
 
@@ -287,10 +291,10 @@ def test_forward_no_frame_effects():
     params = create_test_params(seed=42)
     inputs = create_test_inputs(batch_size=256, seed=42)
     inputs['frame_idx'] = -1
-    
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"No frame effects max_diff={max_diff}"
 
@@ -301,44 +305,45 @@ def test_forward_no_frame_effects():
 
 def test_backward_basic():
     """Test backward pass gradient equivalence between CUDA and PyTorch.
-    
+
     Compares all gradient outputs (rgb_in, exposure, vignetting, color, crf)
     between CUDA backward pass and PyTorch autograd reference.
     """
     params_cuda = create_test_params(num_cameras=2, num_frames=5, seed=42)
     params_torch = create_test_params(num_cameras=2, num_frames=5, seed=42)
-    inputs = create_test_inputs(batch_size=256, num_cameras=2, num_frames=5, seed=42)
-    
+    inputs = create_test_inputs(
+        batch_size=256, num_cameras=2, num_frames=5, seed=42)
+
     # Clone inputs for both passes
     rgb_cuda = inputs['rgb'].clone().requires_grad_(True)
     rgb_torch = inputs['rgb'].clone().requires_grad_(True)
-    
+
     # Forward passes
     output_cuda = run_cuda_forward(params_cuda, inputs, rgb_cuda)
     output_torch = run_torch_forward(params_torch, inputs, rgb_torch)
-    
+
     # Identical gradient for backward
     grad_output = torch.randn_like(output_cuda)
-    
+
     # Backward passes
     output_cuda.backward(grad_output)
     output_torch.backward(grad_output)
-    
+
     atol = 1e-4
-    
+
     # Check each gradient with detailed error info
     grad_pairs = [
         ('rgb_in', rgb_cuda.grad, rgb_torch.grad),
-        ('exposure', params_cuda['exposure_params'].grad, 
+        ('exposure', params_cuda['exposure_params'].grad,
          params_torch['exposure_params'].grad),
-        ('vignetting', params_cuda['vignetting_params'].grad, 
+        ('vignetting', params_cuda['vignetting_params'].grad,
          params_torch['vignetting_params'].grad),
-        ('color', params_cuda['color_params'].grad, 
+        ('color', params_cuda['color_params'].grad,
          params_torch['color_params'].grad),
-        ('crf', params_cuda['crf_params'].grad, 
+        ('crf', params_cuda['crf_params'].grad,
          params_torch['crf_params'].grad),
     ]
-    
+
     for name, grad_cuda, grad_torch in grad_pairs:
         max_diff = torch.abs(grad_cuda - grad_torch).max().item()
         rel_error = compute_relative_error(grad_cuda, grad_torch)
@@ -352,32 +357,32 @@ def test_backward_no_camera_effects():
     params_torch = create_test_params(seed=42)
     inputs = create_test_inputs(batch_size=256, seed=42)
     inputs['camera_idx'] = -1
-    
+
     rgb_cuda = inputs['rgb'].clone().requires_grad_(True)
     rgb_torch = inputs['rgb'].clone().requires_grad_(True)
-    
+
     output_cuda = run_cuda_forward(params_cuda, inputs, rgb_cuda)
     output_torch = run_torch_forward(params_torch, inputs, rgb_torch)
-    
+
     grad_output = torch.randn_like(output_cuda)
-    
+
     output_cuda.backward(grad_output)
     output_torch.backward(grad_output)
-    
+
     atol = 1e-4
-    
+
     # RGB and per-frame params should have gradients
     max_diff = torch.abs(rgb_cuda.grad - rgb_torch.grad).max().item()
     assert max_diff <= atol, f"RGB grad max_diff={max_diff}"
-    
+
     max_diff = torch.abs(
-        params_cuda['exposure_params'].grad - 
+        params_cuda['exposure_params'].grad -
         params_torch['exposure_params'].grad
     ).max().item()
     assert max_diff <= atol, f"Exposure grad max_diff={max_diff}"
-    
+
     max_diff = torch.abs(
-        params_cuda['color_params'].grad - 
+        params_cuda['color_params'].grad -
         params_torch['color_params'].grad
     ).max().item()
     assert max_diff <= atol, f"Color grad max_diff={max_diff}"
@@ -389,32 +394,32 @@ def test_backward_no_frame_effects():
     params_torch = create_test_params(seed=42)
     inputs = create_test_inputs(batch_size=256, seed=42)
     inputs['frame_idx'] = -1
-    
+
     rgb_cuda = inputs['rgb'].clone().requires_grad_(True)
     rgb_torch = inputs['rgb'].clone().requires_grad_(True)
-    
+
     output_cuda = run_cuda_forward(params_cuda, inputs, rgb_cuda)
     output_torch = run_torch_forward(params_torch, inputs, rgb_torch)
-    
+
     grad_output = torch.randn_like(output_cuda)
-    
+
     output_cuda.backward(grad_output)
     output_torch.backward(grad_output)
-    
+
     atol = 1e-4
-    
+
     # RGB and per-camera params should have gradients
     max_diff = torch.abs(rgb_cuda.grad - rgb_torch.grad).max().item()
     assert max_diff <= atol, f"RGB grad max_diff={max_diff}"
-    
+
     max_diff = torch.abs(
-        params_cuda['vignetting_params'].grad - 
+        params_cuda['vignetting_params'].grad -
         params_torch['vignetting_params'].grad
     ).max().item()
     assert max_diff <= atol, f"Vignetting grad max_diff={max_diff}"
-    
+
     max_diff = torch.abs(
-        params_cuda['crf_params'].grad - 
+        params_cuda['crf_params'].grad -
         params_torch['crf_params'].grad
     ).max().item()
     assert max_diff <= atol, f"CRF grad max_diff={max_diff}"
@@ -428,10 +433,10 @@ def test_large_batch():
     """Test with large batch size."""
     params = create_test_params(seed=42)
     inputs = create_test_inputs(batch_size=4096, seed=42)
-    
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"Large batch max_diff={max_diff}"
 
@@ -440,19 +445,19 @@ def test_many_cameras_frames():
     """Test with many cameras and frames."""
     num_cameras = 10
     num_frames = 50
-    
-    params = create_test_params(num_cameras=num_cameras, num_frames=num_frames, seed=42)
+
+    params = create_test_params(
+        num_cameras=num_cameras, num_frames=num_frames, seed=42)
     inputs = create_test_inputs(
         batch_size=256, num_cameras=num_cameras, num_frames=num_frames, seed=42
     )
-    
+
     rgb_cuda = run_cuda_forward(params, inputs, inputs['rgb'].clone())
     rgb_torch = run_torch_forward(params, inputs, inputs['rgb'].clone())
-    
+
     max_diff = torch.abs(rgb_cuda - rgb_torch).max().item()
     assert max_diff < 3e-6, f"Many cameras/frames max_diff={max_diff}"
 
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
-
