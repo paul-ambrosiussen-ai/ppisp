@@ -109,15 +109,16 @@ class PPISPConfig:
     When False, zero corrections are used for novel views.
     """
 
-    controller_distillation: bool = False
+    controller_distillation: bool = True
     """Use distillation to train the controller.
-    When True, the controller is trained with freezing the other PPISP parameters as long as the input
+    When True, the controller is trained with freezing the other PPISP parameters and detaching
+    the input so that gradients only flow through the controller.
     """
 
-    controller_activation_ratio: float = 0.0
+    controller_activation_ratio: float = 0.8
     """Relative training step at which to activate the controller.
     Controller activates when step >= controller_activation_ratio * max_optimization_iters.
-    For example, 0.8 means the controller activates at 80% of training.
+    Default 0.8 means the controller activates at 80% of training.
     """
 
     # Regularization weights

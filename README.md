@@ -98,32 +98,23 @@ Use `PPISPConfig` to customize regularization weights, learning rates, and contr
 
 ### Controller Distillation Mode
 
-When using the controller with distillation, the scene representation (e.g., Gaussians, NeRF) should be frozen once the controller activates. This allows the controller to learn from fixed PPISP parameters without interference from scene updates:
+Controller distillation is enabled by default. When the controller activates, the scene representation (e.g., Gaussians, NeRF) should be frozen. This allows the controller to learn from fixed PPISP parameters without interference from scene updates:
 
 ```python
-from ppisp import PPISP, PPISPConfig
+from ppisp import PPISP
 
-# Enable controller distillation
-config = PPISPConfig(
-    use_controller=True,
-    controller_distillation=True,
-    controller_activation_ratio=0.8,  # Controller activates at 80% of training
-)
+ppisp = PPISP(num_cameras=3, num_frames=500)
 
-ppisp = PPISP(num_cameras=3, num_frames=500, config=config)
-
-# ... setup optimizers/schedulers as usual ...
-
-# Training loop with distillation
+# Training loop: freeze scene parameters when controller activates (default: 80% of training)
 controller_activation_step = int(0.8 * max_optimization_iters)
 
 for step in range(max_optimization_iters):
-    # Freeze scene parameters when controller distillation starts
     if step >= controller_activation_step:
         freeze_scene_parameters()  # Your function to freeze Gaussians/NeRF params
-
-    # ... rest of training loop unchanged ...
+    # ... rest of training loop ...
 ```
+
+To disable distillation, set `controller_distillation=False` in the config.
 
 When distillation is enabled and the controller activates:
 - PPISP automatically freezes its internal parameters (exposure, vignetting, color, CRF)
