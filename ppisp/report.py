@@ -30,6 +30,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -77,8 +79,6 @@ def _plot_exposure(
     frames_per_camera: list[int],
     cam: int,
 ):
-    import matplotlib.pyplot as plt
-
     sub = gs.subgridspec(1, 2, width_ratios=[2, 1], wspace=0.0)
     ax_plot = fig.add_subplot(sub[0])
     ax_img = fig.add_subplot(sub[1])
@@ -127,8 +127,6 @@ def _vig_weight_forward(r2: torch.Tensor, alphas: torch.Tensor) -> torch.Tensor:
 
 
 def _plot_vignetting(fig, gs, vig_params: torch.Tensor, cam: int):
-    import matplotlib.pyplot as plt
-
     sub = gs.subgridspec(1, 2, width_ratios=[2, 1], wspace=0.0)
     ax_plot = fig.add_subplot(sub[0])
     ax_img = fig.add_subplot(sub[1])
@@ -396,8 +394,6 @@ def _plot_color(
     frames_per_camera: list[int],
     cam: int,
 ):
-    import matplotlib.pyplot as plt
-
     start = int(sum(frames_per_camera[:cam]))
     n = int(frames_per_camera[cam])
     p = color_params[start: start + n]
@@ -541,8 +537,6 @@ def _apply_crf(
 
 
 def _plot_crf(fig, gs, crf_params: torch.Tensor, cam: int):
-    import matplotlib.pyplot as plt
-
     sub = gs.subgridspec(1, 2, width_ratios=[2, 1], wspace=0.0)
     ax_plot = fig.add_subplot(sub[0])
     ax_img = fig.add_subplot(sub[1])
@@ -595,14 +589,6 @@ def _plot_crf(fig, gs, crf_params: torch.Tensor, cam: int):
 # Public API
 # =============================================================================
 
-
-def _build_frame_to_camera_idx(frames_per_camera: list[int]) -> torch.Tensor:
-    frame_to_cam: list[int] = []
-    for cam_idx, n in enumerate(frames_per_camera):
-        frame_to_cam.extend([cam_idx] * int(n))
-    return torch.tensor(frame_to_cam, dtype=torch.int64).contiguous()
-
-
 @torch.no_grad()
 def export_ppisp_report(
     ppisp: PPISP,
@@ -629,9 +615,7 @@ def export_ppisp_report(
     Returns:
         List of paths to written PDF files.
     """
-    import matplotlib
     matplotlib.use("Agg", force=True)
-    import matplotlib.pyplot as plt
 
     num_cams = int(ppisp.num_cameras)
 
