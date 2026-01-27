@@ -2,7 +2,7 @@
 
 Code for the work "PPISP: Physically-Plausible Compensation and Control of Photometric Variations in Radiance Field Reconstruction".
 
-[Project website](https://research.nvidia.com/labs/sil/projects/ppisp/) | [Paper](https://research.nvidia.com/labs/sil/projects/ppisp/assets/ppisp_arxiv_v1.pdf)
+[Project website](https://research.nvidia.com/labs/sil/projects/ppisp/) | [Paper](https://arxiv.org/abs/2601.18336)
 
 ## Overview
 
@@ -142,3 +142,17 @@ pdf_paths = export_ppisp_report(
 ```
 
 The report includes visualizations for exposure, vignetting, color correction, and CRF per camera.
+
+## BibTeX
+
+```bibtex
+@misc{deutsch2026ppispphysicallyplausiblecompensationcontrol,
+      title={PPISP: Physically-Plausible Compensation and Control of Photometric Variations in Radiance Field Reconstruction}, 
+      author={Isaac Deutsch and Nicolas Moënne-Loccoz and Gavriel State and Zan Gojcic},
+      year={2026},
+      eprint={2601.18336},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2601.18336},
+}
+```
