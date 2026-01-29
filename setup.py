@@ -29,44 +29,82 @@ os.environ['PYTHONUNBUFFERED'] = '1'
 sys.stderr.reconfigure(line_buffering=True)
 
 
-# Default fallback architectures
-fallback_archs = [
-    "-gencode=arch=compute_75,code=sm_75",
-    "-gencode=arch=compute_80,code=sm_80",
-    "-gencode=arch=compute_89,code=sm_89",
-    "-gencode=arch=compute_120,code=sm_120",
-]
+def get_cuda_arch_flags():
+    """
+    Determine CUDA architecture flags with the following priority:
+    1. TORCH_CUDA_ARCH_LIST environment variable (standard PyTorch convention)
+    2. Runtime GPU detection via torch.cuda.get_device_capability()
+    3. Conservative fallback defaults (no Blackwell/compute_120, requires CUDA 12.8+)
+    """
+    # Priority 1: Check TORCH_CUDA_ARCH_LIST environment variable
+    arch_list_env = os.environ.get("TORCH_CUDA_ARCH_LIST")
+    if arch_list_env:
+        # Parse format: "7.5;8.0;8.6" or "7.5 8.0 8.6"
+        arch_entries = arch_list_env.replace(";", " ").split()
+        gencode_flags = []
+        for entry in arch_entries:
+            entry = entry.strip()
+            if not entry:
+                continue
+            # Handle entries like "8.6" or "8.6+PTX"
+            has_ptx = "+PTX" in entry
+            arch_version = entry.replace("+PTX", "").strip()
+            if "." in arch_version:
+                major, minor = arch_version.split(".")
+                compute_arch = f"compute_{major}{minor}"
+                sm_arch = f"sm_{major}{minor}"
+            else:
+                # Handle entries like "86"
+                compute_arch = f"compute_{arch_version}"
+                sm_arch = f"sm_{arch_version}"
+            if has_ptx:
+                gencode_flags.append(f"-gencode=arch={compute_arch},code={compute_arch}")
+            gencode_flags.append(f"-gencode=arch={compute_arch},code={sm_arch}")
+        if gencode_flags:
+            msg = f"Using TORCH_CUDA_ARCH_LIST: {arch_list_env}"
+            print(msg)
+            print(msg, file=sys.stderr, flush=True)
+            return gencode_flags, f"TORCH_CUDA_ARCH_LIST={arch_list_env}"
+
+    # Priority 2: Runtime GPU detection
+    try:
+        if torch.cuda.is_available():
+            device = torch.cuda.current_device()
+            compute_capability = torch.cuda.get_device_capability(device)
+            arch = f"sm_{compute_capability[0]}{compute_capability[1]}"
+            msg = f"Detected GPU architecture: {arch}"
+            print(msg)
+            print(msg, file=sys.stderr, flush=True)
+            return [f"-arch={arch}"], arch
+    except Exception as e:
+        error_msg = f"Failed to detect GPU architecture: {e}"
+        print(error_msg)
+        print(error_msg, file=sys.stderr, flush=True)
+
+    # Priority 3: Conservative fallback defaults
+    # Note: compute_120 (Blackwell) requires CUDA 12.8+, so it's excluded
+    fallback_archs = [
+        "-gencode=arch=compute_75,code=sm_75",   # Turing, CUDA 10+
+        "-gencode=arch=compute_80,code=sm_80",   # Ampere, CUDA 11+
+        "-gencode=arch=compute_86,code=sm_86",   # Ampere GA10x, CUDA 11.1+
+        "-gencode=arch=compute_89,code=sm_89",   # Ada Lovelace, CUDA 11.8+
+        "-gencode=arch=compute_90,code=sm_90",   # Hopper, CUDA 12.0+
+    ]
+    msg = "Using conservative fallback architectures (no Blackwell/compute_120)"
+    print(msg)
+    print(msg, file=sys.stderr, flush=True)
+    return fallback_archs, "multiple architectures (fallback)"
+
+
+# Get CUDA architecture flags
+arch_flags, detected_arch = get_cuda_arch_flags()
 
 nvcc_args = [
     "-O3",
     "--use_fast_math",
 ]
 nvcc_args += ["-lineinfo", "--generate-line-info", "--source-in-ptx"]
-
-detected_arch = None
-
-if torch.cuda.is_available():
-    try:
-        device = torch.cuda.current_device()
-        compute_capability = torch.cuda.get_device_capability(device)
-        arch = f"sm_{compute_capability[0]}{compute_capability[1]}"
-
-        arch_msg = f"Detected GPU architecture: {arch}"
-        print(arch_msg)
-        print(arch_msg, file=sys.stderr, flush=True)
-
-        nvcc_args.append(f"-arch={arch}")
-        detected_arch = arch
-    except Exception as e:
-        error_msg = f"Failed to detect GPU architecture: {e}. Falling back to multiple architectures."
-        print(error_msg)
-        print(error_msg, file=sys.stderr, flush=True)
-        nvcc_args.extend(fallback_archs)
-else:
-    cuda_msg = "CUDA not available. Falling back to multiple architectures."
-    print(cuda_msg)
-    print(cuda_msg, file=sys.stderr, flush=True)
-    nvcc_args.extend(fallback_archs)
+nvcc_args.extend(arch_flags)
 
 
 class CustomBuildExtension(BuildExtension):
